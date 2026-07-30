@@ -23,40 +23,52 @@ export class Game extends Phaser.Scene {
     this.state = new GameState();
     this.state.load();
 
-    const { width } = this.cameras.main;
+    const { width, height } = this.cameras.main;
 
-    // --- Header ---
-    this.add.text(width / 2, 24, '🏛️ IDLE EMPIRE', {
-      fontSize: '22px', color: '#ffd700', fontStyle: 'bold',
-    }).setOrigin(0.5);
+    // --- Header bar ---
+    const headerBg = this.add.graphics();
+    headerBg.fillStyle(0x0d0d1f, 0.9);
+    headerBg.fillRect(0, 0, width, 72);
 
-    // Stats
-    this.coinText = this.add.text(width / 2, 62, '', {
-      fontSize: '28px', color: '#ffffff', fontStyle: 'bold',
-    }).setOrigin(0.5);
+    this.add.text(16, 28, '🏛️', { fontSize: '22px' }).setOrigin(0, 0.5);
 
-    this.cpsText = this.add.text(width / 2, 90, '', {
-      fontSize: '14px', color: '#88ff88',
-    }).setOrigin(0.5);
+    this.add.text(width / 2, 20, 'IDLE EMPIRE', {
+      fontSize: '20px', color: '#ffd700', fontStyle: 'bold',
+    }).setOrigin(0.5, 0);
+
+    // Stats row
+    this.coinText = this.add.text(width / 2, 48, '', {
+      fontSize: '22px', color: '#ffffff', fontStyle: 'bold',
+    }).setOrigin(0.5, 0);
+
+    this.cpsText = this.add.text(width / 2, 68, '', {
+      fontSize: '13px', color: '#66cc66',
+    }).setOrigin(0.5, 0);
 
     // --- Click area ---
     this.clickArea = this.add.container(width / 2, 200);
     const bg = this.add.graphics();
     bg.fillStyle(0x1a1a3e, 1);
-    bg.fillRoundedRect(-120, -60, 240, 120, 20);
-    bg.lineStyle(2, 0xffd700, 0.6);
-    bg.strokeRoundedRect(-120, -60, 240, 120, 20);
+    bg.fillRoundedRect(-120, -65, 240, 130, 18);
+    bg.lineStyle(2, 0xffd700, 0.5);
+    bg.strokeRoundedRect(-120, -65, 240, 130, 18);
     this.clickArea.add(bg);
 
-    const coin = this.add.text(0, -10, '🪙', { fontSize: '40px' }).setOrigin(0.5);
+    // Subtle inner ring
+    const innerRing = this.add.graphics();
+    innerRing.lineStyle(1, 0xffd700, 0.2);
+    innerRing.strokeCircle(0, -8, 42);
+    this.clickArea.add(innerRing);
+
+    const coin = this.add.text(0, -8, '🪙', { fontSize: '38px' }).setOrigin(0.5);
     this.clickArea.add(coin);
 
-    this.clickText = this.add.text(0, 30, '+1', {
-      fontSize: '16px', color: '#ffd700',
+    this.clickText = this.add.text(0, 32, 'Click me!', {
+      fontSize: '14px', color: '#ffd700',
     }).setOrigin(0.5);
     this.clickArea.add(this.clickText);
 
-    this.clickArea.setSize(240, 120);
+    this.clickArea.setSize(240, 130);
     this.clickArea.setInteractive();
     this.clickArea.on('pointerdown', () => this.handleClick());
     this.clickArea.on('pointerover', () => {
@@ -67,30 +79,32 @@ export class Game extends Phaser.Scene {
     });
 
     // --- Generator shop ---
-    this.add.text(width / 2, 310, '─ SHOP ─', {
-      fontSize: '16px', color: '#888',
+    this.add.text(width / 2, 298, '━━ SHOP ━━', {
+      fontSize: '14px', color: '#666', fontStyle: 'bold',
     }).setOrigin(0.5);
 
     this.genContainer = this.add.container(0, 0);
 
+    const genStartY = 330;
+    const genRowH = 64;
     GENERATORS.forEach((gen, i) => {
-      const y = 346 + i * 58;
+      const y = genStartY + i * genRowH;
       this.createGenRow(gen, i, y, width);
     });
 
     // Save indicator
-    this.add.text(width / 2, 710, '💾 auto-saves every 10s', {
-      fontSize: '10px', color: '#444',
+    this.add.text(width / 2, genStartY + GENERATORS.length * genRowH + 16, '💾 Auto-saved every 10s', {
+      fontSize: '10px', color: '#333',
     }).setOrigin(0.5);
 
     // Spawn orbit coins
     for (let i = 0; i < 6; i++) {
-      const c = this.add.text(0, 0, '🪙', { fontSize: '16px' }).setOrigin(0.5).setAlpha(0.3);
+      const c = this.add.text(0, 0, '🪙', { fontSize: '14px' }).setOrigin(0.5).setAlpha(0.2);
       this.orbitCoins.push({
         obj: c,
         angle: Math.random() * Math.PI * 2,
         speed: 0.2 + Math.random() * 0.3,
-        radius: 100 + Math.random() * 40,
+        radius: 80 + Math.random() * 30,
       });
     }
 
@@ -100,43 +114,58 @@ export class Game extends Phaser.Scene {
   createGenRow(gen: typeof GENERATORS[0], idx: number, y: number, width: number): void {
     const row = this.add.container(width / 2, y);
 
-    // Build button visual — MUST be added first so it renders behind text
-    const btnW = 170;
-    const btnH = 44;
+    const rowW = 420;
+    const rowH = 46;
+
+    // Row background
+    const rowBg = this.add.graphics();
+    rowBg.fillStyle(0x12122a, 1);
+    rowBg.fillRoundedRect(-rowW / 2, -rowH / 2, rowW, rowH, 10);
+    rowBg.lineStyle(1, 0x2a2a4a, 1);
+    rowBg.strokeRoundedRect(-rowW / 2, -rowH / 2, rowW, rowH, 10);
+    row.add(rowBg);
+
+    // Emoji + name (left side)
+    const nameText = this.add.text(-rowW / 2 + 14, 0, `${gen.emoji}  ${gen.name}`, {
+      fontSize: '15px', color: '#ddd', fontStyle: 'bold',
+    }).setOrigin(0, 0.5);
+    row.add(nameText);
+
+    // Count badge
+    const countText = this.add.text(-rowW / 2 + 170, 0, 'x0', {
+      fontSize: '12px', color: '#999',
+    }).setOrigin(0, 0.5);
+    row.add(countText);
+
+    // Cost button (right side)
+    const btnW = 100;
+    const btnH = 32;
+    const btnX = rowW / 2 - btnW / 2 - 10;
+
     const costBtnBg = this.add.graphics();
     const drawBtn = (hover: boolean) => {
       costBtnBg.clear();
       const canAfford = this.state && this.state.coins >= this.state.genCost(gen.key);
-      const color = canAfford ? 0x2a6b2a : 0x333333;
-      const stroke = hover ? 0xffd700 : 0x555555;
-      costBtnBg.fillStyle(color, 1);
-      costBtnBg.fillRoundedRect(-btnW / 2, -btnH / 2, btnW, btnH, 8);
+      const fill = canAfford ? (hover ? 0x3a8a3a : 0x2a6a2a) : (hover ? 0x444444 : 0x333333);
+      const stroke = hover ? 0xffd700 : (canAfford ? 0x449944 : 0x555555);
+      costBtnBg.fillStyle(fill, 1);
+      costBtnBg.fillRoundedRect(btnX - btnW / 2, -btnH / 2, btnW, btnH, 8);
       costBtnBg.lineStyle(1, stroke, hover ? 1 : 0.5);
-      costBtnBg.strokeRoundedRect(-btnW / 2, -btnH / 2, btnW, btnH, 8);
+      costBtnBg.strokeRoundedRect(btnX - btnW / 2, -btnH / 2, btnW, btnH, 8);
     };
     drawBtn(false);
     row.add(costBtnBg);
 
-    const nameText = this.add.text(-130, 0, `${gen.emoji} ${gen.name}`, {
-      fontSize: '14px', color: '#ccc',
-    }).setOrigin(0, 0.5);
-    row.add(nameText);
-
-    const countText = this.add.text(-30, 0, 'x0', {
-      fontSize: '13px', color: '#888',
-    }).setOrigin(1, 0.5);
-    row.add(countText);
-
-    const costText = this.add.text(0, 0, '', {
-      fontSize: '12px', color: '#fff',
+    const costText = this.add.text(btnX, 0, '', {
+      fontSize: '12px', color: '#fff', fontStyle: 'bold',
     }).setOrigin(0.5);
     row.add(costText);
 
-    row.setSize(280, 50);
+    row.setSize(rowW, rowH);
     row.setInteractive();
     row.on('pointerdown', () => {
       if (this.state.buyGenerator(gen.key)) {
-        this.spawnParticles(0, y, gen.emoji);
+        this.spawnParticles(btnX, y, gen.emoji);
         this.updateUI();
       }
     });
@@ -158,8 +187,8 @@ export class Game extends Phaser.Scene {
     const cy = this.clickArea.y - 20;
 
     // Floating +N text
-    const ft = this.add.text(cx + (Math.random() - 0.5) * 60, cy, `+${fmt(earned)}`, {
-      fontSize: '18px', color: '#ffd700', fontStyle: 'bold',
+    const ft = this.add.text(cx + (Math.random() - 0.5) * 50, cy, `+${fmt(earned)}`, {
+      fontSize: '16px', color: '#ffd700', fontStyle: 'bold',
     }).setOrigin(0.5).setAlpha(1);
     this.floatingTexts.push(ft);
     this.tweens.add({
